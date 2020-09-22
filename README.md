@@ -9,7 +9,7 @@ This script resut in ValidPairs file. ValidPairs format is :
 
 
 ```
-    chromosome1 position1 length1 strand1 chromosome2 position2 length2 strand2
+    read_name chromosome1 position1 length1 strand1 chromosome2 position2 length2 strand2
 ```
 ### satistics
 
@@ -38,7 +38,7 @@ Before running sam_to_valid_pairs.sh highly recommended to use BWA-mem for mappi
 To run sam_to_valid_pairs.sh use:
 
 ```
-    ./sam_to_valid_pairs.sh sam_file out_dir
+./sam_to_valid_pairs.sh sam_file out_dir
 ```
 
 ## Get hic file from valid pairs
@@ -46,11 +46,12 @@ To run sam_to_valid_pairs.sh use:
 If you want to get .hic file from valid pairs run:
 
 ```
-    ./vaid_pairs_to_hic.sh path_to_juicer_tools validpairs_file out_dir
+./vaid_pairs_to_hic.sh path_to_juicer_tools genome_version validpairs_file out_dir
 ```
+
+For example, genome_version = "hg19" or "hg38"
 
 ## Optional requirements
 
 - BWA-mem alinger https://github.com/lh3/bwa 
 - Juicer Tools https://github.com/aidenlab/juicer/wiki/Juicer-Tools-Quick-Start
-- Java
