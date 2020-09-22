@@ -29,7 +29,7 @@ Besides of ValidPairs file this script get some key features of Hi-C library qua
 
 ## that is dangling ends ?
 
-Dangling ends is a whole genome fragment. So it is not a ligation product. Dangling ends can appear in the Hi-C data in two ways: becouse of back ligations and from anligated genome fragments. Anyway this reads do not carry information about 3D conformation of chromatin.
+Dangling ends is a whole genome fragment. So it is not a ligation product. Dangling ends can appear in the Hi-C data in two ways: because of back ligations and from anligated genome fragments. Anyway this reads do not carry information about 3D conformation of chromatin.
 
 # Run sam_to_valid_pairs.sh
 
