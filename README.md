@@ -1,15 +1,19 @@
 # ExoC
 
+```
+    Здесь может быть
+    Ваша реклама
+```
+
 # Run bwa-mem
 '''Shell
-time bwa mem -t 14 /mnt/storage/home/eamozheiko/bwa_index/hg19.fa.gz s${SAMPLE}_R1.fastq.gz s${SAMPLE}_R2.fastq.gz > s${SAMPLE}.sam
+    time bwa mem -t 14 /mnt/storage/home/eamozheiko/bwa_index/hg19.fa.gz s${SAMPLE}_R1.fastq.gz s${SAMPLE}_R2.fastq.gz > s${SAMPLE}.sam
 '''
 
 
 # Run sam_to_valid_pairs.sh
 '''Shell
-
-./sam_to_valid_pairs.sh SAM_FIE OUT_DIR
+    ./sam_to_valid_pairs.sh sam_file out_dir
 '''
 
 
