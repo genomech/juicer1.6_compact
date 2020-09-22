@@ -2,7 +2,7 @@
 
 ## What is sam_to_valid_pairs.sh ?
 
-### Valid pairs
+### valid pairs
 
 This sript created for processing Hi-C data. It supports all types of Hi-C protocols and only requires a .SAM input file.
 This script resut in ValidPairs file. ValidPairs format is :
@@ -11,7 +11,7 @@ This script resut in ValidPairs file. ValidPairs format is :
 ```
     chromosome1 position1 length1 strand1 chromosome2 position2 length2 strand2
 ```
-### Satistics
+### satistics
 
 Besides of ValidPairs file this script get some key features of quality of Hi-C libraries:
 
@@ -27,9 +27,9 @@ Besides of ValidPairs file this script get some key features of quality of Hi-C 
 - fracton of cis short range (distance less than 20kb) contacts in valid pairs
 - fracton of cis long range (distance more than 20kb) contacts in valid pairs
 
-### that is dangling ends ?
+### What is dangling ends ?
 
-Dangling ends is a whole genome fragment. So it is not a ligation product. Dangling ends can appear in the Hi-C data in two ways: because of back ligations and from anligated genome fragments. Anyway this reads do not carry information about 3D conformation of chromatin.
+Dangling ends is a whole genome fragment. Dangling ends can appear in the Hi-C data in two ways: because of back ligations and from anligated genome fragments. Anyway this reads do not carry information about 3D conformation of chromatin.
 
 ## Run sam_to_valid_pairs.sh
 
@@ -48,3 +48,9 @@ If you want to get .hic file from valid pairs run:
 ```
     ./vaid_pairs_to_hic.sh path_to_juicer_tools validpairs_file out_dir
 ```
+
+## Optional requirements
+
+- BWA-mem alinger https://github.com/lh3/bwa 
+- Juicer Tools https://github.com/aidenlab/juicer/wiki/Juicer-Tools-Quick-Start
+- Java
