@@ -436,6 +436,84 @@ if ( $2==$6 &&  ($7-$3)>20000 && $5==$9) {
 }
 }END{ { print cis " " trans " " cis_short " " cis_long " " trans2} }' >> stat
 
+#############stat
+cat stat | awk 'BEGIN{getline sample < "sample"}{
+
+if (NR==1) {
+  all_count=$1
+}
+if (NR==2) {
+  rep=$1
+}
+if (NR==3) {
+  mult=$1
+}
+if (NR==4) {
+  unmap_one=$1
+}
+if (NR==4) {
+  unmap_both=$1
+}
+if (NR==5) {
+  rep_before_dup=$1
+}
+if (NR==6) {
+  rep_before_dup=$1
+}
+if (NR==7) {
+  rep_after_dup=$1
+}
+if (NR==8) {
+  same=$1
+  dif=$2
+}
+if (NR==9) {
+  cis=$1
+  trans=$2
+  cis_short=$3
+  cis_long=$4
+}
+}END{
+rep=100*rep/all_count
+rep=rep - rep%1
+mult=100*mult/all_count
+mult=mult - mult%1
+unmap_one=100*unmap_one/all_count
+unmap_one=unmap_one - unmap_one%1
+unmap_both=100*unmap_both/all_count
+unmap_both=unmap_both - unmap_both%1
+
+
+dups = 100*(1 - rep_after_dup/rep_before_dup)
+dups = dups - dups%1
+
+percent_count_of_valid_hic_interactions=percent_count_of_valid_hic_interactions - percent_count_of_valid_hic_interactions%1
+de = 100*(dif - same)/rep_after_dup
+de = de - de%1
+
+
+count_of_valid_hic_interactions = (same)*2
+percent_count_of_valid_hic_interactions = 100*count_of_valid_hic_interactions/all_count
+percent_count_of_valid_hic_interactions=percent_count_of_valid_hic_interactions - percent_count_of_valid_hic_interactions%1
+
+cis1 = 100*cis/(cis+trans)
+cis1 = cis1 - cis1%1
+
+trans1 = 100*trans/(cis+trans)
+trans1 = trans1 - trans1%1
+
+cis_short = 100*cis_short/(cis+trans)
+cis_short = cis_short/1 - cis_short%1
+
+cis_long = 100*cis_long/(cis+trans)
+cis_long = cis_long/1 - cis_long%1
+
+print "sample" "\t" "all_count_of_reads" "\t" "reported_pairs_fraction" "\t" "multiple_pairs_fraction" "\t" "unmap_one_pairs_fraction" "\t" "unmap_both_pairs_fraction" "\t" "duplicates_fraction" "\t" "valid_hic_interactions_count" "\t" "valid_hic_interactions_fraction" "\t" "dangling_ends" "\t" "cis_fraction" "\t" "trans_fraction" "\t" "cis_short_fraction" "\t" "cis_long_fraction"
+
+print sample "\t" all_count "\t" rep "\t" mult "\t" unmap_one "\t" unmap_both "\t" dups "\t" count_of_valid_hic_interactions "\t" percent_count_of_valid_hic_interactions "\t" de "\t" cis1 "\t" trans1 "\t" cis_short "\t" cis_long
+}'  > stat_res
+rm stat
+
 exit
 
 
