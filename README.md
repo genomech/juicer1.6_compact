@@ -27,6 +27,8 @@ Besides of ValidPairs file this script get some key features of quality of Hi-C 
 - fracton of cis short range (distance less than 20kb) contacts in valid pairs
 - fracton of cis long range (distance more than 20kb) contacts in valid pairs
 
+you can find statistics in "stat_res" file
+
 ### what is dangling ends ?
 
 Dangling ends is a whole genome fragment. Dangling ends can appear in the Hi-C data in two ways: because of back ligations and from anligated genome fragments. Anyway this reads do not carry information about 3D conformation of chromatin.
