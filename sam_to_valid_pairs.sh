@@ -2,9 +2,9 @@
 
 
 ## The script will result in the file : allValidPairs
-# allValidPairs fo#rmat: read_name chromosome1 position1 length1 strand1 chromosome2 position2 length2 strand2
+# allValidPairs format: read_name chromosome1 position1 length1 strand1 chromosome2 position2 length2 strand2
 
-
+# allValidPairs format:  chromosome1 position1 chromosome2 position2 strand1 strand2 read_name
 
 SAM_FILE=$1
 OUT_DIR=$2
@@ -22,42 +22,22 @@ if (NR>94) {
 }
 }' > s1
 
-
+grep -v "^@" ${SAM_FILE} > s1
 ###@@@@@@@@@@@@@@@@@@@@@@@@@@@@STAT
 cat s1 | awk 'BEGIN{k=0;n=0}{
   if (n!=$1) {
     n=$1
     k=k+1
 }
-}END{ { print k } }' >> stat
+}END{ { print k } }' > stat
 
 
-cat s1 | awk '{ print $1 " " $2 " " $3 " " $4 " " $5 " " $6 }' > s2
-#rm s1
-
-############################################
-## Len of alingment
-############################################
-
-cat s2 | awk '{ print $6 }' > s2_cigar
 
 
-sed -i -r 's/I/M/g' s2_cigar
-sed -i -r 's/(D|S|H)/ /g' s2_cigar
-sed -i -r 's/M/M /g' s2_cigar
+#extract nessesary columns and descript orientation from SAM flag 
 
-cat s2_cigar | awk '{ m = ""; for (i = 1; i <= NF; ++i) { if ($i ~ "M") { m = m$i}};print m  }' | awk -F'M' '{ m = 0;for (i = 1; i <= NF; ++i) {  m = m+$i}; print m }' > len
-
-#rm s2_cigar
-
-
-############################################
-## Orientation
-############################################
-
-## awk get 5 bit
-cat s2 | awk '
-function d2b(d,  b) {
+cat s1 | awk '
+function d2b5(d,  b) {
       k = 0
       while(k != 5) {
           k = k + 1
@@ -66,13 +46,7 @@ function d2b(d,  b) {
       }
       return(b)
 }
-{
-    print d2b($2)
-}' > is_reverse
-
-## awk get 7 bit
-cat s2 | awk '
-function d2b(d,  b) {
+function d2b7(d,  b) {
       k = 0
       while(k != 7) {
           k = k + 1
@@ -82,356 +56,224 @@ function d2b(d,  b) {
       return(b)
 }
 {
-    print 1 - d2b($2)
-}' > is_r1
+print $1 " " d2b5($2) " " $3 " " $4 " " $5 " " d2b7($2)
 
-## awk get 12 bit
-cat s2 | awk '
-function d2b(d,  b) {
-      k = 0
-      while(k != 12) {
-          k = k + 1
-          b=d%2
-          d=int(d/2)
-      }
-      return(b)
-}
-{
-    print 1 - d2b($2)
-}' > is_sapl
 
-############################################
-## Cbind all extracted data
-############################################
+}' > s2
+########################################################################################
 
-cat s2 | awk 'BEGIN{ k=0;pos_in_read=0 }{ 
-k=k+1
-getline len < "len"
-getline pos_in_read_left < "pos_in_read_left"
-getline pos_in_read_right < "pos_in_read_right"
-getline is_reverse < "is_reverse"
-getline is_r1 < "is_r1"
-getline is_sapl < "is_sapl"
-print $1 " " $2 " " $3 " " $4 " " $5 " " $6 " " len " " k " " 0 " " is_reverse " " is_sapl " " is_r1
-
-}' > s3
-#rm s2
-
+########################################################################################
 
 
 ############################################
 ## Identificate reported pairs, multiple alignment, unmapped
 ############################################
+cat s1 | awk 'BEGIN{k=0; n=0; rep=0; mult=0; unmap=0; rep_count=0; mult_count=0; unmap_one_count=0; unmap_both_count=0;}{
+if (n!=$1) {
+  n=$1
+  
+  if(rep>1){
+  rep_count=rep_count+1
+  } else{
+    if(mult>0){
+      mult_count=mult_count+1
+    } else{
+      if(rep==1){
+        unmap_one_count=unmap_one_count+1
+      } else {
+        unmap_both_count=unmap_both_count+1
+      }
+    }
+  }
+  
+  rep=0;mult=0;unmap_one=0;unmap_both=0;
+}
 
-cat s3 | awk 'BEGIN{k=0;prev_name=1;unmap_r1=0;unmap_r2=0;mult=0;mult_r1=0;mult_r2=0;unmap_both=0;unmap_one=0;is_rep=0;is_rep_r1=0;is_rep_r2=0;st=0}{
-if (prev_name!=$1 && st!=0) {
-  if ((unmap_r1*(1 - is_rep_r1) + unmap_r2*(1 - is_rep_r2))==1){
-    unmap_one=1
-  }
-  if ((unmap_r1*(1 - is_rep_r1) + unmap_r2*(1 - is_rep_r2))==2){
-    unmap_both=1
-  }
-  if ((is_rep_r1 + is_rep_r2)==2){
-    is_rep=1
-  }
-  if (mult_r1*(1 - unmap_r1)*(1 - is_rep_r1)==1 || mult_r2*(1 - unmap_r2)*(1 - is_rep_r2)==1){
-    mult=1
-  }
-  print is_rep " " mult " " unmap_both " " unmap_one
-  unmap_r1=0
-  unmap_r2=0
-  unmap_both=0
-  unmap_one=0
-  mult=0
-  mult_r1=0
-  mult_r2=0
-  is_rep=0
-  is_rep_r1=0
-  is_rep_r2=0
-  k=0
+if($5>0 && length($3)<=5 && $3!="*"){
+  rep=rep+1
 }
-st=1;
-prev_name=$1
-k=k+1
-if ($12==0) {
-  if ($5==0 || length($3)>5) {
-    if ($3=="*" || length($3)>5) {
-      unmap_r1=1
-    } else {
-      mult_r1=1
-    }
-  } else {
-    is_rep_r1=1
-  }
-} else {
-  if ($5==0 || length($3)>5) {
-    if ($3=="*" || length($3)>5) {
-      unmap_r2=1
-    } else {
-      mult_r2=1
-    }
-  } else {
-    is_rep_r2=1
-  }
+if($5==0 && length($3)<=5 && $3!="*"){
+  mult=mult+1
 }
+}END{
+print rep_count " " mult_count " " unmap_one_count " " unmap_both_count-1
 }' > is_rep_mult_unmap
 
 
+rm s1
 ###@@@@@@@@@@@@@@@@@@@@@@@@@@@@STAT
 #is_rep, mult, unmap_both, unmap_one 
-cat is_rep_mult_unmap | awk '{ { print $1 } }' | grep "1" |  wc -l >> stat
-cat is_rep_mult_unmap | awk '{ { print $2 } }' | grep "1" |  wc -l >> stat
-cat is_rep_mult_unmap | awk '{ { print $3 } }' | grep "1" |  wc -l >> stat
-cat is_rep_mult_unmap | awk '{ { print $4 } }' | grep "1" |  wc -l >> stat
-#rm is_rep_mult_unmap
+cat is_rep_mult_unmap | awk '{ { print $1 } }'  >> stat
+cat is_rep_mult_unmap | awk '{ { print $2 } }'  >> stat
+cat is_rep_mult_unmap | awk '{ { print $3 } }'  >> stat
+cat is_rep_mult_unmap | awk '{ { print $4 } }'  >> stat
+rm is_rep_mult_unmap
 
 ############################################
-## Extract reported pairs only
+## Extract reported reads only
 ############################################
 
+cat s2 | awk 'BEGIN{ k=0;pos_in_read=0 }{ 
+if($5>0 && length($3)<=5 && $3!="*")
+print $1 " " $2 " " $3 " " $4 " " $6
+}' > s3
 
-cat s3 | awk 'BEGIN{k=0;prev_name=0;is_rep=0;is_rep_r1=0;is_rep_r2=0;st=0;}{
-if (prev_name!=$1 && st!=0) {
-  if ((is_rep_r1 + is_rep_r2)==2){
-    is_rep=1
-  }
-  for (i = 1; i <= k; ++i) {
-    print is_rep
-  }
-  is_rep=0
-  is_rep_r1=0
-  is_rep_r2=0
-  k=0
-}
-st=1
-getline is_r1 < "is_r1"
-prev_name=$1
-k=k+1
-if (is_r1==1) {
-  if ($5!=0 && length($3)<=5 && $3!="*") {
-    is_rep_r1=1
-  }
-} else {
-  if ($5!=0 && length($3)<=5 && $3!="*") {
-    is_rep_r2=1
-  }
-}
-}' > is_rep
-
-
-cat s3 | awk '{
-getline is_rep < "is_rep"
-if (is_rep==1 && $5!=0 && length($3)<=5 && $3!="*") {
-  print $0
-}
-}' > s4
-#rm s3
-
-
-
+rm s2
 ############################################
 ## Pairing
 ############################################
 
+sed -i -r 's/chr//g' s3
 
 
-cat s4 | awk 'BEGIN{k=1;prev_r=0;a=0;chr_r1="no_chr";st=0;chr_dif=0;}{
-if (0==$12 && prev_r==1) {
-  r1=$0
-  chr_r1=$3
-  a=1
-}
+#cat s3 > s4
+sort -k1,1 -k4,4n s3 > s4
 
-chr_r2=$3
-if (a==1 && chr_r1!=chr_r2) {
-  print r1
-  print $0
-  a=0
-}
-
-prev_r=$12
-}' > s5_1
-
-## same_chr_all_name
-cat s4 | awk 'BEGIN{k=0;prev_r=0;a=0;chr_r1="no_chr";st=0;chr_diff=0;}{
-if (0==$12 && prev_r==1) {
-  r1=$0
-  chr_r1=$3
-  if ( chr_diff==1 ){
-    for (i = 1; i <= k; ++i) {
-      print 0
-    }
-  } else {
-    for (i = 1; i <= k; ++i) {
-      print 1
+rm s3
+# different chromosomes
+cat s4 | awk 'BEGIN{n=0;k=0;is_dif_chr=0;}{
+if (n!=$1) {
+  if(k>1 && is_dif_chr==1){
+    if(chr1<chr2){
+      print chr1 " " pos1 " " chr2 " " pos2 " " str1 " " str2 " " r1 " " r2 " " n
+    } else{
+      print chr2 " " pos2 " " chr1 " " pos1 " " str2 " " str1 " " r2 " " r1 " " n
     }
   }
-  chr_diff=0
-  a=1
-  k=1
-} else {
-  k=k+1
-}
-
-chr_r2=$3
-if (a==1 && chr_r1!=chr_r2) {
-  chr_diff=1
-  a=0
-}
-
-prev_r=$12
-}' > same_chr_all_name
-
-# get same_chr_all_name only
-cat s4 | awk '{
-getline same_chr_all_name < "same_chr_all_name"
-if (same_chr_all_name==1) {
-  print $0
-}
-}' > s5_2
-#rm s4
-#rm same_chr_all_name
-
-# remaining
-cat s5_2 | awk 'BEGIN{k=0;prev_r=0;st=0;a=0;d=-160;r1="";}{
-st_r2=$4
-en_r2=$4+$7
-
-if (0==$12 && prev_r==1) {
-  if ( st>1 ) {
-    print r1
-    print r2
-  }
-  st=st+1
-  d=-160
-  r1=$0
-  st_r1=$4
-  en_r1=$4+$7
+  n=$1
   k=0
-}
-k=k+1
-if ( r1!="" && k!=1) {
-  if ( st_r1<st_r2 ){
-    if ( d<(st_r2-en_r1) ) {
-      r2=$0
-      d=st_r2-en_r1
-    }
-  } else {
-    if ( d<(st_r1-en_r2) ) {
-      r2=$0
-      d=st_r1-en_r2
-    }
-  }
+  is_dif_chr=0
 }
 
-prev_r=$12
-}' >> s5_1
-#rm s5_2
-
-
-
-### #rm "chr"
-sed -i -r 's/chr//g' s5_1
-
-
-
-############################################
-## allValidInteractions
-############################################
-
-# only neighbour in chimeras are pair
-
-cat s5_1 | awk 'BEGIN{k=0;prev_name=0;is_rep=0;is_rep_r1=0;is_rep_r2=0;st=0;pos2=0;pos22=0;}{
-if (prev_name==$1) {
+if(prev_chr!=$3 && k!=0){
+  is_dif_chr=1
+  chr1=prev_chr
+  pos1=prev_pos
+  str1=prev_str
+  r1=prev_r
   chr2=$3
   pos2=$4
-  len2=$7
-  str2=$10
-  if ( 1==1 ) {
-    if ( chr1==chr2 && pos1>pos2) {
-      print $1 " " chr2 " " pos2 " " len2 " " str2 " " chr1 " " pos1 " " len1 " " str1
-    }
-    if ( chr1==chr2 && pos1<=pos2 ) {
-      print $1 " " chr1 " " pos1 " " len1 " " str1 " " chr2 " " pos2 " " len2 " " str2
-    }
-    if ( chr1>chr2) {
-      print $1 " " chr2 " " pos2 " " len2 " " str2 " " chr1 " " pos1 " " len1 " " str1
-    }
-    if ( chr1<chr2) {
-      print $1 " " chr1 " " pos1 " " len1 " " str1 " " chr2 " " pos2 " " len2 " " str2
-    }
-  }
+  str2=$2
+  r2=$5
 }
-prev_name=$1
-chr1=$3
-pos1=$4
-len1=$7
-str1=$10
+
+k=k+1
+prev_chr=$3
+prev_pos=$4
+prev_str=$2
+prev_r=$5
 }' > allValidPairs_pre
-#rm s5_1
+
+# same chromosomes
+cat s4 | awk 'BEGIN{n=0;k=0;is_dif_chr=0;prev_abs_val=0;}{
+if (n!=$1) {
+  if(k>1 && is_dif_chr==0){
+    print chr1 " " pos1 " " chr2 " " pos2 " " str1 " " str2 " " r1 " " r2 " " n
+    
+  }
+  n=$1
+  k=0
+  is_dif_chr=0
+  chr1=$3
+  pos1=$4
+  str1=$2
+  r1=$5
+}
 
 
-############################################
-## #rm duplicates
-############################################
+if(k!=0){
+  chr2=$3
+  pos2=$4
+  str2=$2
+  r2=$5
+}
 
+if(prev_chr!=$3 && k!=0){
+  is_dif_chr=1
+}
+
+k=k+1
+prev_chr=$3
+}' >> allValidPairs_pre
+
+rm s4
 
 sed -i -r 's/X/2300000000/g' allValidPairs_pre
 sed -i -r 's/Y/2400000000/g' allValidPairs_pre
-grep -v "M" allValidPairs_pre > allValidPairs_pre1
-#rm allValidPairs_pre
-sort -k2,2n -k6,6n -k3,3n -k7,7n allValidPairs_pre1 > allValidPairs_pre2
-#rm allValidPairs_pre1
+cat allValidPairs_pre | awk '{
+if($2!="M" && $3!="M"){
+  print $0
+}
+}' > allValidPairs_pre1
+rm allValidPairs_pre
+sort -k1,1n -k3,3n -k2,2n -k4,4n allValidPairs_pre1 > allValidPairs_pre2
+rm allValidPairs_pre1
 sed -i -r 's/2300000000/X/g' allValidPairs_pre2
 sed -i -r 's/2400000000/Y/g' allValidPairs_pre2
 
 
 
-cat allValidPairs_pre2 | awk 'BEGIN{c1=0;c2=0;s1=0;s2=0}(c1!=$2 || c2!=$3 || s1!=$6 || s2!=$7){print;c1=$2;c2=$3;s1=$6;s2=$7}' > allValidPairs
+cat allValidPairs_pre2 | awk 'BEGIN{c1=0;c2=0;s1=0;s2=0}(c1!=$1 || c2!=$2 || s1!=$3 || s2!=$4){print;c1=$1;c2=$2;s1=$3;s2=$4}' > allValidPairs_pre3
 
 
 ###@@@@@@@@@@@@@@@@@@@@@@@@@@@@STAT
-# report pairs before #rm duplicates
+# report pairs before rm duplicates
 cat allValidPairs_pre2 | wc -l >> stat
-#rm allValidPairs_pre2
+rm allValidPairs_pre2
 
 ###@@@@@@@@@@@@@@@@@@@@@@@@@@@@STAT
-# report pairs after #rm duplicates
-cat allValidPairs | wc -l >> stat
+# report pairs after rm duplicates
+cat allValidPairs_pre3 | wc -l >> stat
 
+
+
+
+#cat allValidPairs_pre3 | awk '{
+cat allValidPairs_pre3 | awk '{
+if($7==$8){
+  if($6==1){
+    str2=0
+  }
+  if($6==0){
+    str2=1
+  }
+  print $1 " " $2 " "$3 " " $4 " " $5 " " str2 " " $9
+} else 
+{
+
+  print $1 " " $2 " "$3 " " $4 " " $5 " " $6 " " $9
+}
+
+}' > allValidPairs
+
+rm allValidPairs_pre3
 ###@@@@@@@@@@@@@@@@@@@@@@@@@@@@STAT
 # dangling ends
-cat allValidPairs | awk 'BEGIN{FF=0;RR=0;RF=0;FR=0;}{
-if ( $2==$6 &&  $5==1 && $9==1) {
-  RR=RR+1
+cat allValidPairs | awk 'BEGIN{same=0;dif=0;}{
+if ($5==$6) {
+  same=same+1
 }
-if ( $2==$6 &&  $5==0 && $9==0) {
-  FF=FF+1
+if ($5!=$6) {
+  dif=dif+1
 }
-if ( $2==$6 &&  $5==1 && $9==0) {
-  RF=RF+1
-}
-if ( $2==$6 &&  $5==0 && $9==1) {
-  FR=FR+1
-}
-}END{ { print RR " " FF " " FR " " RF } }' >> stat
+}END{ { print same " " dif } }' >> stat
 
 ###@@@@@@@@@@@@@@@@@@@@@@@@@@@@STAT
 # cis trans
 cat allValidPairs | awk 'BEGIN{cis=0;trans=0;cis_short=0;trans2=0;cis_long=0;}{
-if ( $2==$6 && $5==$9) {
+if ( $1==$3 && $5==$6) {
   cis=cis+1
 }
-if ( $2!=$6 && $5==$9) {
+if ( $1!=$3 && $5==$6) {
   trans=trans+1
 }
-if ( $2!=$6 && $5!=$9) {
+if ( $1!=$3 && $5!=$6) {
   trans2=trans2+1
 }
-if ( $2==$6 &&  ($7-$3)<=20000 && $5==$9) {
+if ( $1==$3 &&  ($4-$2)<=20000 && $5==$6) {
   cis_short=cis_short+1
 }
-if ( $2==$6 &&  ($7-$3)>20000 && $5==$9) {
+if ( $1==$3 &&  ($4-$2)>20000 && $5==$6) {
   cis_long=cis_long+1
 }
 }END{ { print cis " " trans " " cis_short " " cis_long " " trans2} }' >> stat
@@ -451,11 +293,8 @@ if (NR==3) {
 if (NR==4) {
   unmap_one=$1
 }
-if (NR==4) {
-  unmap_both=$1
-}
 if (NR==5) {
-  rep_before_dup=$1
+  unmap_both=$1
 }
 if (NR==6) {
   rep_before_dup=$1

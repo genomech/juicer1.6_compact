@@ -9,7 +9,7 @@ This script resut in ValidPairs file. ValidPairs format is :
 
 
 ```
-    read_name chromosome1 position1 length1 strand1 chromosome2 position2 length2 strand2
+    chromosome1 position1 chromosome2 position2 strand1 strand2 read_name
 ```
 ### satistics
 
@@ -43,13 +43,15 @@ To run sam_to_valid_pairs.sh use:
 ./sam_to_valid_pairs.sh sam_file out_dir
 ```
 
+
 ## Get hic file from valid pairs
 
 If you want to get .hic file from valid pairs run:
 
 ```
-./vaid_pairs_to_hic.sh path_to_juicer_tools genome_version validpairs_file out_dir
+./vaid_pairs_to_hic.sh path_to_juicer_tools genome_version validpairs_file out_dir sample_name
 ```
+
 
 For example, genome_version = "hg19" or "hg38"
 
