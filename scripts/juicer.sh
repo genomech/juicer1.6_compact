@@ -359,22 +359,22 @@ then
 	if [ -z "$chimeric" ]
         then
         # Align fastq pair
-            echo "bwa mem -SP5M $threadstring $refSeq $name1$ext $name2$ext > $name$ext.sam"
+            echo "bwa mem -SP5M $threadstring $refSeq $name1$ext $name2$ext | samtools view -O BAM > $name$ext.bam"
 
-            bwa mem -SP5M $threadstring $refSeq $name1$ext $name2$ext > $name$ext.sam
+            bwa mem -SP5M $threadstring $refSeq $name1$ext $name2$ext | samtools view -O BAM > $name$ext.bam
             if [ $? -ne 0 ]
             then
                 echo "***! Alignment of $name1$ext $name2$ext failed."
                 exit 1
             else                                                            
-		echo "(-:  Align of $name$ext.sam done successfully"
+		echo "(-:  Align of $name$ext.bam done successfully"
             fi                                    
         fi                                                              
     
         # call chimeric_blacklist.awk to deal with chimeric reads; 
         # sorted file is sorted by read name at this point
 	touch $name${ext}_abnorm.sam $name${ext}_unmapped.sam  
-	awk -v "fname1"=$name${ext}_norm.txt -v "fname2"=$name${ext}_abnorm.sam -v "fname3"=$name${ext}_unmapped.sam -f ${juiceDir}/scripts/common/chimeric_blacklist.awk $name$ext.sam
+	samtools view $name$ext.bam | awk -v "fname1"=$name${ext}_norm.txt -v "fname2"=$name${ext}_abnorm.sam -v "fname3"=$name${ext}_unmapped.sam -f ${juiceDir}/scripts/common/chimeric_blacklist.awk
 	if [ $? -ne 0 ]
 	then
             echo "***! Failure during chimera handling of $name${ext}"
@@ -416,7 +416,7 @@ then
     then
         mv $donesplitdir/* $splitdir/.
     fi
-    if ! sort -T $tmpdir -m -k2,2d -k6,6d -k4,4n -k8,8n -k1,1n -k5,5n -k3,3n $splitdir/*.sort.txt  > $outputdir/merged_sort.txt
+    if ! sort -T $tmpdir -m -k2,2d -k6,6d -k4,4n -k8,8n -k1,1n -k5,5n -k3,3n $splitdir/*.sort.txt | gzip -c > $outputdir/merged_sort.txt.gz
     then 
         echo "***! Some problems occurred somewhere in creating sorted align files."
         exit 1
@@ -434,9 +434,9 @@ then
     
     if [ "$justexact" -eq 1 ]
     then
-	awk -f ${juiceDir}/scripts/common/dups.awk -v name=${outputdir}/ -v nowobble=1 ${outputdir}/merged_sort.txt
+	zcat ${outputdir}/merged_sort.txt.gz | awk -f ${juiceDir}/scripts/common/dups.awk -v name=${outputdir}/ -v nowobble=1 
     else
-	awk -f ${juiceDir}/scripts/common/dups.awk -v name=${outputdir}/ ${outputdir}/merged_sort.txt
+	zcat ${outputdir}/merged_sort.txt.gz | awk -f ${juiceDir}/scripts/common/dups.awk -v name=${outputdir}/ 
     fi
     # for consistency with cluster naming in split_rmdups
     mv ${outputdir}/optdups.txt ${outputdir}/opt_dups.txt 
