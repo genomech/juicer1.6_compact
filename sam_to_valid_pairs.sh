@@ -16,13 +16,13 @@ cd ${OUT_DIR}
 ############################################
 ## Sam parsing
 ############################################
-cat ${SAM_FILE} | awk '{
+samtools view -O SAM ${SAM_FILE} | awk '{
 if (NR>94) {
   print $0
 }
 }' > s1
 
-grep -v "^@" ${SAM_FILE} > s1
+samtools view -O SAM ${SAM_FILE} | grep -v "^@" > s1
 ###@@@@@@@@@@@@@@@@@@@@@@@@@@@@STAT
 cat s1 | awk 'BEGIN{k=0;n=0}{
   if (n!=$1) {
