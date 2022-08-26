@@ -56,7 +56,7 @@ use vars qw/ $opt_s $opt_l $opt_d $opt_o $opt_q $opt_h /;
 # Check arguments
 getopts('s:l:o:q:h');
 
-my $site_file;
+my $site_file = "/opt/juicer/restriction_sites/hg19_DpnII2.txt";
 my $ligation_junction = "GATCGATC";
 my $stats_file = "stats.txt";
 my $mapq_threshold = 1;
@@ -86,11 +86,6 @@ if (scalar(@ARGV)==0) {
   print STDOUT "No input file specified, reading from input stream\n";
 }
 
-# Remove parenthesis
-$ligation_junction =~ s/\(//;
-$ligation_junction =~ s/\)//;
-
-# with OR | symbol, this won't work, need to explicitly fix
 my $dangling_junction = substr $ligation_junction, length($ligation_junction)/2;
 
 # Global variables for calculating statistics
@@ -130,6 +125,16 @@ my $intra_fragment = 0;
 my $unique = 0;
 # logspace bins
 my @bins = (10,12,15,19,23,28,35,43,53,66,81,100,123,152,187,231,285,351,433,534,658,811,1000,1233,1520,1874,2310,2848,3511,4329,5337,6579,8111,10000,12328,15199,18738,23101,28480,35112,43288,53367,65793,81113,100000,123285,151991,187382,231013,284804,351119,432876,533670,657933,811131,1000000,1232847,1519911,1873817,2310130,2848036,3511192,4328761,5336699,6579332,8111308,10000000,12328467,15199111,18738174,23101297,28480359,35111917,43287613,53366992,65793322,81113083,100000000,123284674,151991108,187381742,231012970,284803587,351119173,432876128,533669923,657933225,811130831,1000000000,1232846739,1519911083,1873817423,2310129700,2848035868,3511191734,4328761281,5336699231,6579332247,8111308308,10000000000);
+
+#Tima's addings:
+my $pos_distance_threashold = 1;
+my $inter_FF_RR = 0;
+my $intra_FF_RR = 0;
+my $inner_inter = 0;
+my $outer_inter = 0;
+my $left_inter = 0;
+my $right_inter = 0;
+my $large_inter = 0;
 
 if (index($site_file, "none") != -1) {
    #no restriction enzyme, no need for RE distance
@@ -186,14 +191,16 @@ while (<>) {
       # determine right/left/inner/outer ordering of chromosomes/strands
       if ($record[0] == $record[4]) {
         if ($record[0] == 0) {
-          if ($pos_dist >= 20000) {
+          if ($pos_dist >= $pos_distance_threashold) {
             $right++;
+            $intra_FF_RR++;
           }
           $rightM{$hist_dist}++;
         }
         else {
-          if ($pos_dist >= 20000) {
+          if ($pos_dist >= $pos_distance_threashold) {
             $left++;
+            $intra_FF_RR++;
           }
           $leftM{$hist_dist}++;
         }
@@ -201,13 +208,13 @@ while (<>) {
       else {
         if ($record[0] == 0) {
           if ($record[2] < $record[6]) {
-            if ($pos_dist >= 20000) {
+            if ($pos_dist >= $pos_distance_threashold) {
               $inner++;
             }
             $innerM{$hist_dist}++;
           }
           else {
-            if ($pos_dist >= 20000) {
+            if ($pos_dist >= $pos_distance_threashold) {
               $outer++;
             }
             $outerM{$hist_dist}++;
@@ -215,13 +222,13 @@ while (<>) {
         }
         else {
           if ($record[2] < $record[6]) {
-            if ($pos_dist >= 20000) {
+            if ($pos_dist >= $pos_distance_threashold) {
               $outer++;
             }
             $outerM{$hist_dist}++;
           }
           else {
-            if ($pos_dist >= 20000) {
+            if ($pos_dist >= $pos_distance_threashold) {
               $inner++;
             }
             $innerM{$hist_dist}++;
@@ -229,13 +236,13 @@ while (<>) {
         }
       }
       # intra reads less than 20KB apart
-      if ($pos_dist < 10) {
+      if ($pos_dist < 0) {
         $very_small++;
         if ($is_dangling) {
           $very_small_dangling++;
         }
       }
-      elsif ($pos_dist < 20000) {
+      elsif ($pos_dist < $pos_distance_threashold) {
         $small++;
         if ($is_dangling) {
           $small_dangling++;
@@ -253,6 +260,47 @@ while (<>) {
       if ($is_dangling) {
         $inter_dangling++;
       }
+      if ($record[0] == $record[4]) {
+        if ($record[0] == 0) {
+          if ($pos_dist >= $pos_distance_threashold) {
+            $right_inter++;
+            $inter_FF_RR++;
+          }
+        }
+        else {
+          if ($pos_dist >= $pos_distance_threashold) {
+            $left_inter++;
+            $inter_FF_RR++;
+          }
+        }
+      }
+      else {
+        if ($record[0] == 0) {
+          if ($record[2] < $record[6]) {
+            if ($pos_dist >= $pos_distance_threashold) {
+              $inner_inter++;
+            }
+          }
+          else {
+            if ($pos_dist >= $pos_distance_threashold) {
+              $outer_inter++;
+            }
+          }
+        }
+        else {
+          if ($record[2] < $record[6]) {
+            if ($pos_dist >= $pos_distance_threashold) {
+              $outer_inter++;
+            }
+          }
+          else {
+            if ($pos_dist >= $pos_distance_threashold) {
+              $inner_inter++;
+            }
+          }
+        }
+      }
+      $large_inter++;
     }
     if ($num_records > 8) {
       my $mapq_val = min($record[8],$record[11]);
@@ -266,22 +314,22 @@ while (<>) {
         }
       }
       # read pair contains ligation junction
-      if ($record[10] =~ m/($ligation_junction)/ || $record[13] =~ m/($ligation_junction)/) {
+      if ($record[10] =~ m/$ligation_junction/ || $record[13] =~ m/$ligation_junction/) {
         $ligation++;
       }
     }
     # determine distance from nearest HindIII site, add to histogram
     if (index($site_file, "none") == -1) {
-      my $report = (($record[1] != $record[5]) || ($pos_dist >= 20000));
-      my $dist = &distHindIII($record[0], $record[1], $record[2], $record[3], $report);
-      if ($dist <= 2000) {
-        $hindIII{$dist}++;
-      }
-
-      $dist = &distHindIII($record[4], $record[5], $record[6], $record[7], $report);
-      if ($dist <= 2000) {
-        $hindIII{$dist}++;
-      }
+    my $report = (($record[1] != $record[5]) || ($pos_dist >= $pos_distance_threashold));
+    my $dist = &distHindIII($record[0], $record[1], $record[2], $record[3], $report);
+    if ($dist <= 2000) {
+      $hindIII{$dist}++;
+    }
+    
+    $dist = &distHindIII($record[4], $record[5], $record[6], $record[7], $report);
+    if ($dist <= 2000) {
+      $hindIII{$dist}++;
+    }
     }
     if ($is_dangling) {
       if ($record[10] =~ m/^$dangling_junction/) {
@@ -292,7 +340,7 @@ while (<>) {
       }
       if ($dist == 1) {
         if ($record[1] == $record[5]) {
-          if ($pos_dist < 20000) {
+          if ($pos_dist < $pos_distance_threashold) {
             $true_dangling_intra_small++;
           }
           else {
@@ -374,10 +422,16 @@ else {
   print FILE " 3' Bias (Long Range): 0\% \- 0\%\n";
 }
 if ($large > 0) {
-	printf FILE " Pair Type %(L-I-O-R): %0.0f\%", $left*100/$large;
+	printf FILE " Pair Type intra chrom %(L-I-O-R): %0.0f\%", $left*100/$large;
   printf FILE " - %0.0f\%", $inner*100/$large;
   printf FILE " - %0.0f\%", $outer*100/$large;
   printf FILE " - %0.0f\%\n", $right*100/$large;
+  printf FILE " Pair Type inter chrom %(L-I-O-R): %0.0f\%", $left_inter*100/$large_inter;
+  printf FILE " - %0.0f\%", $inner_inter*100/$large_inter;
+  printf FILE " - %0.0f\%", $outer_inter*100/$large_inter;
+  printf FILE " - %0.0f\%\n", $right_inter*100/$large_inter;
+  printf FILE " DE: %0.0f\%\n", ($outer+$inner-$left-$right)*100/($large+$large_inter);
+  printf FILE " Cis/all (FF and RR orient): %0.1f\%\n", $intra_FF_RR*100/($intra_FF_RR+$inter_FF_RR);
 }
 else {
 	print FILE " Pair Type %(L-I-O-R): 0\% - 0\% - 0\% - 0\%\n";
@@ -401,7 +455,7 @@ else {
 }
 printf FILE "%0.2f\%)\n", $intra*100/$unique; 
 
-printf FILE "Short Range (<20Kb): %s ", commify($small);
+printf FILE "Short Range (<1bp): %s ", commify($small);
 if ($seq == 1) {
   printf FILE " (%0.2f\% / ", $small*100/$reads; 
 }
@@ -410,7 +464,7 @@ else {
 }
 printf FILE "%0.2f\%)\n", $small*100/$unique; 
 
-printf FILE "Long Range (>20Kb): %s ", commify($large);
+printf FILE "Long Range (>1bp): %s ", commify($large);
 if ($seq == 1) {
   printf FILE " (%0.2f\% / ", $large*100/$reads; 
 }
