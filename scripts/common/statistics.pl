@@ -128,6 +128,7 @@ my @bins = (10,12,15,19,23,28,35,43,53,66,81,100,123,152,187,231,285,351,433,534
 
 #Tima's addings:
 my $pos_distance_threashold = 1;
+my $short_long_threshold = 20000;
 my $inter_FF_RR = 0;
 my $intra_FF_RR = 0;
 my $inner_inter = 0;
@@ -242,7 +243,7 @@ while (<>) {
           $very_small_dangling++;
         }
       }
-      elsif ($pos_dist < $pos_distance_threashold) {
+      elsif ($pos_dist < $short_long_threshold) {
         $small++;
         if ($is_dangling) {
           $small_dangling++;
@@ -422,15 +423,15 @@ else {
   print FILE " 3' Bias (Long Range): 0\% \- 0\%\n";
 }
 if ($large > 0) {
-	printf FILE " Pair Type intra chrom %(L-I-O-R): %0.0f\%", $left*100/$large;
-  printf FILE " - %0.0f\%", $inner*100/$large;
-  printf FILE " - %0.0f\%", $outer*100/$large;
-  printf FILE " - %0.0f\%\n", $right*100/$large;
+	printf FILE " Pair Type intra chrom %(L-I-O-R): %0.0f\%", $left*100/($very_small + $small + $large);
+  printf FILE " - %0.0f\%", $inner*100/($very_small + $small + $large);
+  printf FILE " - %0.0f\%", $outer*100/($very_small + $small + $large);
+  printf FILE " - %0.0f\%\n", $right*100/($very_small + $small + $large);
   printf FILE " Pair Type inter chrom %(L-I-O-R): %0.0f\%", $left_inter*100/$large_inter;
   printf FILE " - %0.0f\%", $inner_inter*100/$large_inter;
   printf FILE " - %0.0f\%", $outer_inter*100/$large_inter;
   printf FILE " - %0.0f\%\n", $right_inter*100/$large_inter;
-  printf FILE " DE: %0.0f\%\n", ($outer+$inner-$left-$right)*100/($large+$large_inter);
+  printf FILE " DE: %0.0f\%\n", ($outer+$inner-$left-$right)*100/($very_small + $small + $large + $large_inter);
   printf FILE " Cis/all (FF and RR orient): %0.1f\%\n", $intra_FF_RR*100/($intra_FF_RR+$inter_FF_RR);
 }
 else {
@@ -455,7 +456,8 @@ else {
 }
 printf FILE "%0.2f\%)\n", $intra*100/$unique; 
 
-printf FILE "Short Range (<1bp): %s ", commify($small);
+printf FILE "Short Range (<%s", commify($short_long_threshold);
+printf FILE "bp): %s ", commify($small);
 if ($seq == 1) {
   printf FILE " (%0.2f\% / ", $small*100/$reads; 
 }
@@ -464,7 +466,8 @@ else {
 }
 printf FILE "%0.2f\%)\n", $small*100/$unique; 
 
-printf FILE "Long Range (>1bp): %s ", commify($large);
+printf FILE "Long Range (>%s", commify($short_long_threshold);
+printf FILE "bp): %s ", commify($large);
 if ($seq == 1) {
   printf FILE " (%0.2f\% / ", $large*100/$reads; 
 }
