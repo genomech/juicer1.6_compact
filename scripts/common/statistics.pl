@@ -162,7 +162,8 @@ while (<>) {
 
   if (($record[1] eq $record[5]) && $record[3] == $record[7]) {
     $intra_fragment++;
-    $countme = 0;
+    # from now on, count intrafragment reads in DE stats and (if they are FF/RR) cis/trans stats
+    # $countme = 0;
   }
 	elsif ($num_records > 8) {
 		my $mapq_val = min($record[8],$record[11]);
