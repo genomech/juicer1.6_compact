@@ -29,5 +29,5 @@ input example: [juicer.sh **-g** Python_molurus_bivittatus-5.0.2 **-d** /data/es
 input example: [ juicer.sh **-d** /data/estsoi/data_juicer/Eopsaltria_australis_coastal_lineage **-p** /data/estsoi/data_juicer/Eopsaltria_australis_coastal_lineage/file.chrom.sizes **-c file.cool -m** ]  
 ![cool](cool_on_final.png)
 
-4) Use -q <resolution> flag to specify output cool file resolution
+4) Use -q <resolution> flag to specify output cool file resolution. Default value: 1kb
 5) -n flag for automatic balancing. Pipeline will run **cooler balance** command two times: one to determine the lowest variance possible for a given file, second time to stop at this variance.
