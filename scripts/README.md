@@ -30,4 +30,4 @@ input example: [ juicer.sh **-d** /data/estsoi/data_juicer/Eopsaltria_australis_
 ![cool](cool_on_final.png)
 
 4) Use -q <resolution> flag to specify output cool file resolution
-5) -n flag for automatic balancing. Pipeline will run cooler balance command two times: one to determine the lowest variance possible for a given file, second time to stop at this variance.
+5) -n flag for automatic balancing. Pipeline will run **cooler balance** command two times: one to determine the lowest variance possible for a given file, second time to stop at this variance.
