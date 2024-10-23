@@ -71,7 +71,7 @@ read1str="_R1"
 read2str="_R2" 
 
 ## Default options, overridden by command line arguments
-
+#cool_resolution=1000
 # Juicer directory, contains scripts/, references/, and restriction_sites/
 # can also be set in options via -D
 juiceDir="/opt/juicer"
@@ -87,6 +87,7 @@ about=""
 nofrag=1
 # use wobble for dedupping by default (not just exact matches)
 justexact=0
+treads=15
 
 ## Read arguments                                                     
 usageHelp="Usage: ${0##*/} [-g genomeID] [-d topDir] [-s site] [-a about] \n                 [-S stage] [-p chrom.sizes path] [-y restriction site file]\n                 [-z reference genome file] [-D Juicer scripts directory]\n                 [-b ligation] [-t threads] [-h] [-f] [-j]"
@@ -127,7 +128,7 @@ printHelpAndExit() {
     exit "$1"
 }
 
-while getopts "d:g:a:hs:p:y:z:S:D:fjet:b:c:m" opt; do
+while getopts "d:g:a:hs:p:y:z:S:D:fjet:b:c:q:mn" opt; do
     case $opt in
 	g) genomeID=$OPTARG ;;
 	h) printHelpAndExit 0;;
@@ -148,21 +149,37 @@ while getopts "d:g:a:hs:p:y:z:S:D:fjet:b:c:m" opt; do
 	e) earlyexit=1 ;;
 	c) cool_file=$OPTARG ;;
 	m) justcool=1 ;;
+	n) balance_cool=1 ;;
+	q) cool_resolution=$OPTARG ;;
 	[?]) printHelpAndExit 1;;
     esac
 done
 
+
+
 if [ ! -z $justcool ]
 then
 	echo "(-: only cool file will be generated, -m flag was given"
+	echo "(-: resolution for cool file: $cool_resolution"
 	cat $genomePath | awk 'OFS = "\t" {print $1,$2+int(150)}' > ${topDir}/modified.chrom.sizes
 	echo "(-: modified.chrom.sizes file was generated"
-	cat ${topDir}"/aligned/merged_nodups.txt" | awk 'BEGIN {OFS="\t"} ($9>=30)&&($12>=30) {print $2,$3,$6,$7}' | cooler cload pairs -c1 1 -p1 2 -c2 3 -p2 4 ${topDir}/modified.chrom.sizes:1000 - $cool_file
+	cat ${topDir}"/aligned/merged_nodups.txt" | awk 'BEGIN {OFS="\t"} ($9>=30)&&($12>=30) {print $2,$3,$6,$7}' | cooler cload pairs -c1 1 -p1 2 -c2 3 -p2 4 ${topDir}/modified.chrom.sizes:${cool_resolution} - $cool_file
 	if [ $? -ne 0 ]
 	then
 		echo "***! cool file generation failed"
 	else
 		echo "(-: cool file was generated"
+	fi
+	if [ ! -z $balance_cool ]
+	then
+		echo '(-: created cool file will be balanced, -n flag was given'
+		
+		min_value=$(eval cooler balance -f -p $threads --max-iters 400 ${topDir}/$cool_file 2> ${topDir}/file.txt;  cat ${topDir}/file.txt | grep "INFO:cooler.balance:variance is" | awk '{printf("%.25f\n", $3)}' | sort -n | head -n1)
+		echo "minimal achived variance is $min_value"
+		min_value=$(echo $min_value + 0.0000000000001 | bc -l)
+		eval cooler balance -f -p $threads --max-iters 400 --tol $min_value ${topDir}/$cool_file
+	else
+		echo '(-: -n flag was not given, please do not forget to balance your brand new cool file!'
 	fi
 	exit 1
 else
@@ -543,12 +560,24 @@ else
 	else
 		echo "(-: modified.chrom.sizes file was successfully created"
 	fi
-	cat ${outputdir}/merged_nodups.txt | awk 'BEGIN {OFS="\t"} ($9>=30)&&($12>=30) {print $2,$3,$6,$7}' | cooler cload pairs -c1 1 -p1 2 -c2 3 -p2 4 ${topDir}/modified.chrom.sizes:1000 - $cool_file
+	cat ${outputdir}/merged_nodups.txt | awk 'BEGIN {OFS="\t"} ($9>=30)&&($12>=30) {print $2,$3,$6,$7}' | cooler cload pairs -c1 1 -p1 2 -c2 3 -p2 4 ${topDir}/modified.chrom.sizes:$cool_resolution - ${outputdir}/$cool_file
 	if [ $? -ne 0 ]
 	then
 		echo "***! juicer failed to create cool file"
 		exit 1
 	else
 		echo "(-: cool file was successfuly created"
+	fi
+	if [ ! -z $balance_cool ]
+	then
+		echo "(-: created cool file will be balanced, -n flag was given"
+		
+		min_value=$(eval cooler balance -f -p $threads --max-iters 400 ${topDir}/$cool_file 2> ${topDir}/file.txt;  cat ${topDir}/file.txt | grep "INFO:cooler.balance:variance is" | awk '{printf("%.25f\n", $3)}' | sort -n | head -n1)
+		echo "minimal achived variance is $min_value"
+		min_value=$(echo $min_value + 0.0000000000001 | bc -l)
+		eval cooler balance -f -p $threads --max-iters 400 --tol $min_value ${topDir}/$cool_file
+		echo "(-: cool file was successfuly"
+	else
+		echo "(-: -n flag was not given, please do not forget to balance your brand new cool file!"
 	fi
 fi
